@@ -1,0 +1,54 @@
+version: '3'
+
+services:
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress-arnskincare
+    environment:
+      - WORDPRESS_DB_HOST=${WORDPRESS_DB_HOST}
+      - WORDPRESS_DB_USER=${WORDPRESS_DB_USER}
+      - WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+      - WORDPRESS_DB_NAME=${WORDPRESS_DB_NAME}
+      - VIRTUAL_HOST=${DOMAIN_NAME}
+    ports:
+      - "${WORDPRESS_PORT}:80"
+    volumes:
+      - ./data/wordpress:/var/www/html
+      - ./config/custom-php.ini:/usr/local/etc/php/conf.d/custom-php.ini  # Mengaitkan file php.ini
+
+    networks:
+      - backend
+      - proxy-tier
+
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb-arnskincare
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${WORDPRESS_DB_NAME}
+      - MYSQL_USER=${WORDPRESS_DB_USER}
+      - MYSQL_PASSWORD=${WORDPRESS_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ./data/mariadb:/var/lib/mysql
+    networks:
+      - backend
+
+  redis:
+    image: redis:latest
+    container_name: redis-arnskincare
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+  proxy-tier:
+    external: true
